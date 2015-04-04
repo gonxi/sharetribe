@@ -533,7 +533,7 @@ class ListingsController < ApplicationController
          matches([__, :none])
       [true, ""]
     when matches([:braintree])
-      [true, ""]
+       [true, ""]
     when matches([:paypal])
       can_post = PaypalHelper.community_ready_for_payments?(community.id)
       error_msg =
@@ -565,7 +565,7 @@ class ListingsController < ApplicationController
     when matches([:preauthorize, :paypal])
       initiate_order_path(listing_id: listing_id)
     when matches([:preauthorize, :braintree])
-      preauthorize_payment_path(:listing_id => @listing.id.to_s)
+      post_pay_listing_path(:listing_id => @listing.id.to_s)
     when matches([:postpay])
       post_pay_listing_path(:listing_id => @listing.id.to_s)
     else
