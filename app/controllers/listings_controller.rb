@@ -533,11 +533,7 @@ class ListingsController < ApplicationController
          matches([__, :none])
       [true, ""]
     when matches([:braintree])
-      can_post = !PaymentRegistrationGuard.new(community, user, listing).requires_registration_before_posting?
-      settings_link = payment_settings_path(community.payment_gateway.gateway_type, user)
-      error_msg = t("listings.new.you_need_to_fill_payout_details_before_accepting", :payment_settings_link => view_context.link_to(t("listings.new.payment_settings_link"), settings_link)).html_safe
-
-      [can_post, error_msg]
+      [true, ""]
     when matches([:paypal])
       can_post = PaypalHelper.community_ready_for_payments?(community.id)
       error_msg =
