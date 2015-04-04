@@ -28,7 +28,7 @@
 
   .preauthorize-section
     %h2.preauthorize-details-title
-      = t(".details")
+      = t(".Para pagar llama al 900 52 52 34")
 
     %ul.no-bullets
       %li
@@ -63,11 +63,7 @@
       = form.date_select :start_on, discard_day: true, discard_month: true, discard_year: true, default: preauthorize_form.start_on
       = form.date_select :end_on, discard_day: true, discard_month: true, discard_year: true, default: preauthorize_form.end_on
 
-    .preauthorize-section
-      %h2
-        = t(".payment")
 
-      = render partial: "payments/braintree/credit_card_info", locals: {braintree_form: braintree_form}
 
     .preauthorize-section
       %h2
