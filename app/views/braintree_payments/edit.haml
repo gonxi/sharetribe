@@ -16,7 +16,7 @@
     });
 
 - content_for :title_header do
-  %h1= t(".new_credit_card_payment")
+  %h1= t("Elige metodo de pago")
 
 .centered-section.payment-form
   - payment_receiver = @conversation.payment_receiver
@@ -32,17 +32,7 @@
     = "#{t("payments.form.price")}"
     = humanized_money_with_symbol(@braintree_payment.sum)
 
-  = form_for @braintree_payment,
-    :url => person_message_braintree_payment_path(@current_user.id,
-      @conversation.id,
-      @braintree_payment.id),
-      :html => { :id => "braintree-payment-form", :class => "hidden" } do |form|
 
-    = render partial: "payments/braintree/credit_card_info", locals: {braintree_form: braintree_form}
-
-    .row
-      .col-12
-        = form.button t(".confirm_payment"), :class => "send_button"
 
     .row
       .col-12
