@@ -16,8 +16,7 @@ class BraintreePaymentsController < ApplicationController
     @braintree_payment = @conversation.payment
     community_payment_gateway = @current_community.payment_gateway
     @braintree_client_side_encryption_key = community_payment_gateway.braintree_client_side_encryption_key
-      MarketplaceService::Transaction::Command.transition_to(@conversation.id, "paid")
-      redirect_to person_transaction_path(:id => params[:message_id])
+    render locals: {braintree_form: Form::Braintree.new}
   end
 
   def update

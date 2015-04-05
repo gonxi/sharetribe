@@ -19,6 +19,7 @@
   %h1= t("Elige metodo de pago")
 
 .centered-section.payment-form
+  %h1= t("Llama al 900 52 52 54 para realizar el pago")
   - payment_receiver = @conversation.payment_receiver
   %p
     = t(".payment_receiver")
@@ -37,23 +38,20 @@
     .row
       .col-12
         %p
-          = "When you confirm the payment we will charge your credit card. We will transfer the money to #{link_to(payment_receiver.name, payment_receiver)} when a) you have marked the request completed or b) #{@conversation.automatic_confirmation_after_days} days have passed since you confirmed the payment.".html_safe
-
-        %p
-          = "If there are any issues, you have #{@conversation.automatic_confirmation_after_days} days to cancel the request. This will notify the admin who will then contact you for a refund."
+          = "Para asegurar la seguridad y confianza de la venta, Klikaid.com se encarga de mantener el dinero en escrow hasta que el trabajo haya sido finalizado. Liberaremos el pago a #{link_to(payment_receiver.name, payment_receiver)} cuando el trabajo haya sido finalizado ".html_safe
 
     %br/
 
     .row
       .col-12
         %h3
-          = "Security information"
+          = "Informacion de seguridad"
 
         %p
-          = "We do not store your credit card information."
+          = "Nosotros no almacenamos los datos de pagos."
 
         %p
-          = "The credit card information will be securely forwarded to the payment provider."
+          = "Utilizamos metodos de pagos seguros como Paypal."
 
         %p
           = link_to "https://www.braintreepayments.com/" do
