@@ -6,7 +6,22 @@
     = action_button_label(listing)
     = link_to(listing.title, listing)
 
+
+
 #new_message_form.centered-section
+  %h1
+    = "Explica al técnico lo mejor posible tu problema."
+  %h2
+    = "1- El técnico recibirá un mensaje con los detalles del trabajo."
+  %h2
+    = "2- Si el técnico acepta el trabajo tienes que depositar el dinero en el fondo de Klikaid.com."
+  %h2
+    = "3- Cuando marques el trabajo como finalizado liberaremos el dinero al técnico."
+  %h2
+    = "4- Recuerda valorar y dejar tu opinión sobre el técnico."
+  %h3
+    = "(Puedes llamar al 900 52 52 54 en cualquier momento para resolver tus dudas del proceso)"
+
 
   = render partial: "conversations/details", locals: { listing_conversation: @listing_conversation, listing: listing, transaction: nil }
 
