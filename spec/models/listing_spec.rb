@@ -28,7 +28,6 @@
 #  old_category_id          :integer
 #  category_id              :integer
 #  share_type_id            :integer
-#  transaction_type_id      :integer
 #  listing_shape_id         :integer          not null
 #  transaction_process_id   :integer
 #  shape_name_tr_key        :string(255)
@@ -38,6 +37,7 @@
 #  currency                 :string(255)
 #  quantity                 :string(255)
 #  unit_type                :string(32)
+#  unit_tr_key              :string(64)
 #  deleted                  :boolean          default(FALSE)
 #  require_shipping_address :boolean          default(FALSE)
 #  pickup_enabled           :boolean          default(FALSE)

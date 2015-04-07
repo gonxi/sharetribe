@@ -7,14 +7,6 @@ class HomepageController < ApplicationController
   VIEW_TYPES = ["grid", "list", "map"]
 
   def index
-    ## Support old /?map=true URL START
-    ## This can be removed after March 2014
-    if !params[:view] && params[:map] == "true" then
-      redirect_params = params.except(:map).merge({view: "map"})
-      redirect_to url_for(redirect_params), status: :moved_permanently
-    end
-    ## Support old /?map=true URL END
-
     @homepage = true
 
     @view_type = HomepageController.selected_view_type(params[:view], @current_community.default_browse_view, APP_DEFAULT_VIEW_TYPE, VIEW_TYPES)
@@ -25,11 +17,10 @@ class HomepageController < ApplicationController
 
     # This assumes that we don't never ever have communities with only 1 main share type and
     # only 1 sub share type, as that would make the listing type menu visible and it would look bit silly
-    @transaction_type_menu_enabled = all_shapes.size > 1
+    listing_shape_menu_enabled = all_shapes.size > 1
     @show_categories = @current_community.categories.size > 1
-    filters_enabled = @current_community.custom_fields.size > 0 || @current_community.show_price_filter
-    @show_custom_fields = @current_community.custom_fields.select { |field| field.can_filter? }.present?
-    @category_menu_enabled = @show_categories || @show_custom_fields || filters_enabled
+    @show_custom_fields = @current_community.custom_fields.any?(&:can_filter?) || @current_community.show_price_filter
+    @category_menu_enabled = @show_categories || @show_custom_fields
 
     @app_store_badge_filename = "/assets/Available_on_the_App_Store_Badge_en_135x40.svg"
     if File.exists?("app/assets/images/Available_on_the_App_Store_Badge_#{I18n.locale}_135x40.svg")
@@ -38,20 +29,37 @@ class HomepageController < ApplicationController
 
     listings_per_page = APP_CONFIG.grid_listings_limit
 
+    filter_params = {}
+
+    listing_shape_param = params[:transaction_type]
+
+    all_shapes = shapes.get(community_id: @current_community.id)[:data]
+    selected_shape = all_shapes.find { |s| s[:name] == listing_shape_param }
+
+    filter_params[:listing_shape] = Maybe(selected_shape)[:id].or_else(nil)
+
+    compact_filter_params = HashUtils.compact(filter_params)
+
     @listings = if @view_type == "map"
-      find_listings(params, APP_CONFIG.map_listings_limit)
+      find_listings(params, APP_CONFIG.map_listings_limit, compact_filter_params)
     else
-      find_listings(params, listings_per_page)
+      find_listings(params, listings_per_page, compact_filter_params)
     end
+
+    shape_name_map = all_shapes.map { |s| [s[:id], s[:name]]}.to_h
 
     if request.xhr? # checks if AJAX request
       if @view_type == "grid" then
         render :partial => "grid_item", :collection => @listings, :as => :listing
       else
-        render :partial => "list_item", :collection => @listings, :as => :listing
+        render :partial => "list_item", :collection => @listings, :as => :listing, locals: { shape_name_map: shape_name_map }
       end
     else
-      render locals: { shapes: all_shapes, selected_shape: @selected_shape }
+      render locals: {
+               shapes: all_shapes,
+               selected_shape: selected_shape,
+               shape_name_map: shape_name_map,
+               listing_shape_menu_enabled: listing_shape_menu_enabled }
     end
   end
 
@@ -67,26 +75,10 @@ class HomepageController < ApplicationController
 
   private
 
-  def find_listings(params, listings_per_page)
-    # :share_type was renamed to :transaction_type
-    # Support both URLs for a while
-    # This can be removeds soon (June 2014)
-    params[:transaction_type] ||= params[:share_type]
-
-    filter_params = {}
-
+  def find_listings(params, listings_per_page, filter_params)
     Maybe(@current_community.categories.find_by_url_or_id(params[:category])).each do |category|
       filter_params[:category] = category.id
       @selected_category = category
-    end
-
-    all_shapes = shapes.get(community_id: @current_community.id)[:data]
-    shape_by_name = all_shapes.find { |s| s[:name] == params[:transaction_type] }
-    shape_by_id = all_shapes.find { |s| s[:transaction_type_id] == params[:transaction_type] } unless shape_by_name
-
-    Maybe(shape_by_name || shape_by_id).each do |shape|
-      filter_params[:transaction_type] = shape[:transaction_type_id]
-      @selected_shape = shape
     end
 
     @listing_count = @current_community.listings.currently_open.count

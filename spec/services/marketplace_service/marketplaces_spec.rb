@@ -39,7 +39,7 @@ describe MarketplaceService::API::Marketplaces do
       expect(c[:available_currencies]).to eql "GBP"
     end
 
-    it "should set correct transaction_type and category" do
+    it "should set correct listing shape and category" do
       community_hash = create(@community_params)
       c = Community.find(community_hash[:id])
       s = listings_api.shapes.get(community_id: c.id).data.first
@@ -64,8 +64,8 @@ describe MarketplaceService::API::Marketplaces do
       expect(s[:price_quantity_placeholder]).to eql nil
       expect(s[:shipping_enabled]).to eql false
 
-      # check that category and transaction type are linked
-      expect(TransactionType.where(community_id: c.id).first.categories.first).to eql c.categories.first
+      # check that category and shape are linked
+      expect(CategoryListingShape.where(listing_shape_id: s[:id]).first.category).to eql c.categories.first
     end
 
     it "should have preauthorize_payments enabled" do

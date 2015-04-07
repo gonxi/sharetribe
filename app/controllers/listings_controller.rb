@@ -51,16 +51,17 @@ class ListingsController < ApplicationController
         page =  params[:page] || 1
         per_page = params[:per_page] || 50
 
+        all_shapes = get_shapes()
+        all_processes = get_processes()
+        direction_map = ListingShapeHelper.shape_direction_map(all_shapes, all_processes)
+
         if params[:share_type].present?
           direction = params[:share_type]
-          transaction_type_direction_map = ListingShapeHelper.transaction_types_to_direction_map(@current_community) # deprecated
 
-          all_shapes = ListingService::API::Api.shapes.get(community_id: @current_community.id).maybe.or_else([])
-
-          params[:transaction_types] = {
+          params[:listing_shapes] = {
             id: all_shapes.select { |shape|
-              transaction_type_direction_map[shape[:transaction_type_id]] == direction
-            }.map { |shape| shape[:transaction_type_id] }
+              direction_map[shape[:id]] == direction
+            }.map { |shape| shape[:id] }
           }
         end
 
@@ -74,7 +75,7 @@ class ListingsController < ApplicationController
                          updated: updated,
 
                          # deprecated
-                         direction_map: ListingShapeHelper.transaction_types_to_direction_map(@current_community)
+                         direction_map: direction_map
                        }
       end
     end
@@ -166,12 +167,12 @@ class ListingsController < ApplicationController
       @custom_field_questions = @listing.category.custom_fields
       @numeric_field_ids = numeric_field_ids(@custom_field_questions)
 
-      shape = get_shape(Maybe(params)[:transaction_type].to_i.or_else(nil))
+      shape = get_shape(Maybe(params)[:listing_shape].to_i.or_else(nil))
       process = get_transaction_process(community_id: @current_community.id, transaction_process_id: shape[:transaction_process_id])
 
       # PaymentRegistrationGuard needs this to be set before posting
       @listing.transaction_process_id = shape[:transaction_process_id]
-      @listing.transaction_type_id = shape[:transaction_type_id]
+      @listing.listing_shape_id = shape[:id]
 
       payment_type = MarketplaceService::Community::Query.payment_type(@current_community.id)
       allow_posting, error_msg = payment_setup_status(
@@ -187,10 +188,19 @@ class ListingsController < ApplicationController
         render :partial => "listings/payout_registration_before_posting", locals: { error_msg: error_msg }
       end
     else
+      category_tree = CategoryViewUtils.category_tree(
+        categories: ListingService::API::Api.categories.get(community_id: @current_community.id)[:data],
+        shapes: get_shapes,
+        locale: I18n.locale,
+        all_locales: @current_community.locales,
+        translation_cache: community_translations
+      )
+
       render :new, locals: {
                categories: @current_community.top_level_categories,
                subcategories: @current_community.subcategories,
-               shapes: get_shapes
+               shapes: get_shapes,
+               category_tree: category_tree
              }
     end
   end
@@ -201,13 +211,16 @@ class ListingsController < ApplicationController
     end
 
     params[:listing] = normalize_price_param(params[:listing])
-    shape = get_shape(Maybe(params)[:listing][:transaction_type_id].to_i.or_else(nil))
+    shape = get_shape(Maybe(params)[:listing][:listing_shape_id].to_i.or_else(nil))
     unit_type = Maybe(shape[:units].first)[:type].or_else(nil)
+    unit_tr_key = Maybe(shape[:units].first)[:translation_key].or_else(nil)
+
 
     @listing = Listing.new(
       create_listing_params(params[:listing]).merge(
       listing_shape_id: shape[:id],
       unit_type: unit_type,
+      unit_tr_key: unit_tr_key,
       transaction_process_id: shape[:transaction_process_id],
       shape_name_tr_key: shape[:name_tr_key],
       action_button_tr_key: shape[:action_button_tr_key]
@@ -249,7 +262,7 @@ class ListingsController < ApplicationController
     @custom_field_questions = @listing.category.custom_fields.find_all_by_community_id(@current_community.id)
     @numeric_field_ids = numeric_field_ids(@custom_field_questions)
 
-    shape = get_shape(@listing.transaction_type_id)
+    shape = get_shape(@listing.listing_shape_id)
     process = get_transaction_process(community_id: @current_community.id, transaction_process_id: shape[:transaction_process_id])
 
     render locals: commission(@current_community, process).merge(shape: shape)
@@ -267,7 +280,7 @@ class ListingsController < ApplicationController
 
     params[:listing] = normalize_price_param(params[:listing])
 
-    shape = get_shape(@listing.transaction_type_id)
+    shape = get_shape(@listing.listing_shape_id)
     unit_type = Maybe(shape[:units].first)[:type].or_else(nil)
 
     update_successful = @listing.update_fields(
@@ -619,6 +632,10 @@ class ListingsController < ApplicationController
     ListingService::API::Api
   end
 
+  def transactions_api
+    TransactionService::API::Api
+  end
+
   def valid_unit_type?(shape:, unit_type:)
     if unit_type.nil?
       shape[:units].empty?
@@ -628,15 +645,21 @@ class ListingsController < ApplicationController
   end
 
   def get_shapes
-    listings_api.shapes.get(community_id: @current_community.id).maybe.or_else(nil).tap { |shapes|
-      raise ArgumentError.new("Can not find any listing shape for community #{community_id}") if shapes.nil?
+    @shapes ||= listings_api.shapes.get(community_id: @current_community.id).maybe.or_else(nil).tap { |shapes|
+      raise ArgumentError.new("Can not find any listing shape for community #{@current_community.id}") if shapes.nil?
     }
   end
 
-  def get_shape(transaction_type_id)
+  def get_processes
+    @processes ||= transactions_api.processes.get(community_id: @current_community.id).maybe.or_else(nil).tap { |processes|
+      raise ArgumentError.new("Can not find any transaction process for community #{@current_community.id}") if processes.nil?
+    }
+  end
+
+  def get_shape(listing_shape_id)
     shape_find_opts = {
       community_id: @current_community.id,
-      transaction_type_id: transaction_type_id
+      listing_shape_id: listing_shape_id
     }
 
     shape_res = listings_api.shapes.get(shape_find_opts)
