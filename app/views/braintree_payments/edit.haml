@@ -32,6 +32,13 @@
   %p
     = "#{t("payments.form.price")}"
     = humanized_money_with_symbol(@braintree_payment.sum)
+  %form{:action => "https://www.paypal.com/es/cgi-bin/webscr", :method => "post", :name => "_xclick"}
+  %input{:name => "cmd", :type => "hidden", :value => "_xclick"}
+    %input{:name => "business", :type => "hidden", :value => "gonxi.gonzalo@gmail.com"}
+      %input{:name => "currency_code", :type => "hidden", :value => "EUR"}
+        %input{:name => @conversation.payment_receiver, :type => "hidden", :value => @conversation.listing }
+          %input{:name => "amount", :type => "hidden", :value => @braintree_payment.sum }
+            %input{:alt => "Realice pagos con PayPal: es rápido, gratis y seguro", :border => "0", :name => "submit", :src => "http://www.paypal.com/es_ES/i/btn/x-click-but01.gif", :type => "image"}
 
 
 
